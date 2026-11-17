@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { getContext, isAdmin } from '@/lib/auth'
+export async function PATCH(request:NextRequest,{params}:{params:Promise<{id:string}>}){const ctx=await getContext();if(!ctx)return NextResponse.json({error:'Inicie sesión'},{status:401});if(!isAdmin(ctx.profile?.role))return NextResponse.json({error:'Sin permiso'},{status:403});const {id}=await params;if(id===ctx.user.id)return NextResponse.json({error:'No puede modificar su propio rol'},{status:400});const parsed=z.object({role:z.enum(['ADMINISTRADOR','AUDITOR','CONSULTOR'])}).safeParse(await request.json());if(!parsed.success)return NextResponse.json({error:'Rol inválido'},{status:400});const result=await ctx.supabase.from('profiles').update({role:parsed.data.role}).eq('id',id).select('id,role').single();return result.error?NextResponse.json({error:result.error.message},{status:400}):NextResponse.json({data:result.data})}
